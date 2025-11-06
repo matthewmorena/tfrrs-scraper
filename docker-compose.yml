@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+  tfrrs-api:
+    build: .
+    container_name: tfrrs_api
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    restart: unless-stopped

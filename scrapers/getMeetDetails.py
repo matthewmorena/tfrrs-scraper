@@ -33,7 +33,7 @@ def parse_event_id(event_id_str: str):
 
 def parse_tf_event_results(event_div, hidden_classes_set):
     title_elem = event_div.select_one(".custom-table-title h3, .custom-table-title h5")
-    event_name = title_elem.get_text(strip=True) if title_elem else None
+    event_name = str(title_elem.get_text(strip=True)).split('\n', 1)[0] if title_elem else None
 
     # Skip relays, para, and field events
     exclude_keywords = [

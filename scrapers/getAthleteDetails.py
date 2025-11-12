@@ -24,7 +24,7 @@ def parse_name_and_year(raw_name: str):
     return name_only, year_info
 
 def extract_name_and_teams(soup):
-    """Extract athlete name, year, and current/previous team slugs."""
+    """Extract athlete name, year, and current/previous team info."""
     name_el = soup.select_one("h3.panel-title.large-title")
     raw_name = name_el.get_text(" ", strip=True) if name_el else None
     athlete_name, class_year = parse_name_and_year(raw_name)
@@ -34,16 +34,33 @@ def extract_name_and_teams(soup):
     else:
         logger.debug(f"Parsed athlete: {athlete_name} ({class_year})")
 
-    # Current team
+    # --- Current Team (Name + Slug + Gender) ---
     current_team_slug = None
-    team_anchor = soup.select_one("a[href][class*='panel-actions'] h3.panel-title")
+    current_team_name = None
+    gender = None
+
+    # Find anchor containing the current team slug and team name <h3>
+    team_anchor = soup.select_one("a[href*='/teams/'] h3.panel-title")
     if team_anchor:
         parent_a = team_anchor.find_parent("a", href=True)
         if parent_a:
-            current_team_slug = extract_team_slug(parent_a["href"])
-            logger.debug(f"Current team slug: {current_team_slug}")
+            href = parent_a["href"]
+            current_team_slug = extract_team_slug(href)
+            current_team_name = team_anchor.get_text(strip=True)
 
-    # Previous teams
+            # Infer gender from slug
+            if "_m_" in current_team_slug.lower():
+                gender = "Male"
+            elif "_f_" in current_team_slug.lower():
+                gender = "Female"
+            else:
+                gender = "Unknown"
+
+            logger.debug(
+                f"Current team: {current_team_name} (slug={current_team_slug}, gender={gender})"
+            )
+
+    # --- Previous Teams ---
     previous_team_slugs = []
     prev_container = soup.select_one(".panel-second-title div.float-right")
     if prev_container:
@@ -54,7 +71,7 @@ def extract_name_and_teams(soup):
         if previous_team_slugs:
             logger.debug(f"Previous team slugs: {previous_team_slugs}")
 
-    return athlete_name, class_year, current_team_slug, previous_team_slugs
+    return athlete_name, class_year, current_team_slug, current_team_name, gender, previous_team_slugs
 
 
 def extract_athlete_results(soup):
@@ -140,7 +157,15 @@ def get_athlete_details(athlete_url: str):
     soup = BeautifulSoup(html, "lxml")
 
     parse_start = time.time()
-    athlete_name, class_year, current_team_slug, previous_team_slugs = extract_name_and_teams(soup)
+    (
+        athlete_name,
+        class_year,
+        current_team_slug,
+        current_team_name,
+        gender,
+        previous_team_slugs,
+    ) = extract_name_and_teams(soup)
+
     results = extract_athlete_results(soup)
     parse_time = time.time() - parse_start
 
@@ -154,6 +179,8 @@ def get_athlete_details(athlete_url: str):
         "athlete_name": athlete_name,
         "class_year": class_year,
         "current_team_slug": current_team_slug,
+        "current_team_name": current_team_name,
+        "gender": gender,
         "previous_team_slugs": previous_team_slugs,
         "results": results,
     }

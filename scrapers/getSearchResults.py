@@ -104,7 +104,7 @@ def parse_athlete_results(soup):
             continue
 
         # Extract athlete ID from /athletes/<id>/
-        match = re.search(r"/athletes/(\d+)/", athlete_cell["href"])
+        match = re.search(r"/athletes/(\d+)/?", athlete_cell["href"])
         athlete_id = match.group(1) if match else None
 
         # Extract team slug if present

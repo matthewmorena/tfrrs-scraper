@@ -87,6 +87,11 @@ def extract_athlete_results(soup):
         meet_url = meet_link["href"] if meet_link else None
         meet_id = extract_meet_id(meet_url)
 
+        if "/xc/" in meet_url:
+            meet_type = "xc"
+        else:
+            meet_type = "tf"
+
         date_span = header.find("span")
         meet_date = date_span.get_text(strip=True) if date_span else None
 
@@ -119,6 +124,7 @@ def extract_athlete_results(soup):
                     place = re.sub(r"\(.*?\)", "", place).strip()
 
             results.append({
+                "meet_type": meet_type,
                 "meet_id": meet_id,
                 "meet_name": meet_name,
                 "date": meet_date,

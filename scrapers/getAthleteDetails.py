@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import time
-from utils.common import safe_decode, extract_meet_id, extract_team_slug, default_headers
+from utils.common import safe_decode, extract_meet_id, extract_team_slug, default_headers, time_to_seconds
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__, "athlete_scrape.log")
@@ -105,7 +105,7 @@ def extract_athlete_results(soup):
 
             # Skip relays, para, and field events
             exclude_keywords = [
-                "relay", "x", "para", "jump", "vault", "shot", "discus",
+                "relay", "x", "dmr", "smr", "para", "jump", "vault", "shot", "discus",
                 "hammer", "javelin", "weight", "athlon"
             ]
             event_name = cols[0].get_text(strip=True)
@@ -114,6 +114,8 @@ def extract_athlete_results(soup):
                 continue
 
             mark = cols[1].get_text(strip=True)
+            mark_int = time_to_seconds(mark)
+
             place = cols[2].get_text(strip=True)
 
             round_info = None
@@ -130,6 +132,7 @@ def extract_athlete_results(soup):
                 "date": meet_date,
                 "event": event_name,
                 "mark": mark,
+                "mark_int": mark_int,
                 "place": place,
                 "round": round_info,
             })

@@ -37,7 +37,7 @@ def parse_tf_event_results(event_div, hidden_classes_set):
 
     # Skip relays, para, and field events
     exclude_keywords = [
-        "relay", "para", "jump", "vault", "shot", "discus",
+        "relay", "x", "dmr", "smr", "para", "jump", "vault", "shot", "discus",
         "hammer", "javelin", "weight", "athlon"
     ]
     if event_name and any(k in event_name.lower() for k in exclude_keywords):

@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import time
-from utils.common import safe_decode, extract_athlete_id, extract_team_slug, default_headers
+from utils.common import safe_decode, extract_athlete_id, extract_team_slug, default_headers, time_to_seconds
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__, "meet_scrape.log")
@@ -26,7 +26,7 @@ def parse_event_id(event_id_str: str):
         if valid_round:
             round_label, heat_number = "finals", 1
 
-    return round_label, heat_number, event_uid, valid_round
+    return round_num, round_label, heat_number, event_uid, valid_round
 
 
 # ---------- Track & Field Parsing ---------- #
@@ -45,7 +45,7 @@ def parse_tf_event_results(event_div, hidden_classes_set):
         return None
 
     wind_elem = event_div.select_one(".custom-table-title .wind-text")
-    wind = wind_elem.get_text(strip=True) if wind_elem else None
+    wind = float(wind_elem.get_text(strip=True).replace("W: ", "")) if wind_elem else None
 
     table = event_div.select_one("table.table-hover, table.table-striped")
     if not table:
@@ -70,18 +70,20 @@ def parse_tf_event_results(event_div, hidden_classes_set):
         team_name = team_link.get_text(strip=True) if team_link else None
         team_slug = extract_team_slug(team_link["href"]) if team_link else None
 
-        # Find first visible time column
-        time, event_id = "", None
+        # Find first visible time column (time renamed to mark to make it event-agnostic)
+        mark, event_id = "", None
         for td in cells[4:]:
             td_classes = td.get("class", [])
             if td_classes and not hidden_classes_set.intersection(td_classes):
                 val = td.get_text(strip=True)
                 if val:
-                    time = val
+                    mark = val
                     event_id = td_classes[0]
                     break
 
-        round_label, heat_number, event_uid, valid_round = parse_event_id(event_id)
+        mark_seconds = time_to_seconds(mark)
+
+        round_num, round_label, heat_number, event_uid, valid_round = parse_event_id(event_id)
         if not valid_round:
             logger.debug(f"Skipping combined heat round event: {event_name} ({event_id})")
             return None
@@ -93,8 +95,9 @@ def parse_tf_event_results(event_div, hidden_classes_set):
             "year": year,
             "team_name": team_name,
             "team_slug": team_slug,
-            "time": time,
-            "event_id": event_id,
+            "mark": mark,
+            "mark_seconds" : mark_seconds,
+            "event_id_str": event_id,
         })
 
     logger.info(f"Parsed TF event: {event_name} ({len(results)} results)")
@@ -102,6 +105,7 @@ def parse_tf_event_results(event_div, hidden_classes_set):
         "event_id": event_uid,
         "event_name": event_name,
         "round": round_label,
+        "round_num": round_num,
         "heat": heat_number,
         "wind": wind,
         "results": results,
@@ -184,7 +188,7 @@ def parse_xc_event(anchor):
             "athlete_id": athlete_id,
             "team_name": team_name,
             "team_slug": team_slug,
-            "time": cells[5].get_text(strip=True),
+            "mark": cells[5].get_text(strip=True),
         })
 
     logger.info(f"Parsed XC event: {event_name} ({len(results)} results)")

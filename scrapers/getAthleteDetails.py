@@ -87,10 +87,20 @@ def extract_athlete_results(soup):
         meet_url = meet_link["href"] if meet_link else None
         meet_id = extract_meet_id(meet_url)
 
+        event_id = None
+
         if "/xc/" in meet_url:
             meet_type = "xc"
         else:
             meet_type = "tf"
+            for row in table.find_all("tr"):
+                if row.find_parent("thead"):
+                    continue  # skip header rows
+                a = row.find("a", href=True)
+                if a:
+                    body_url = a["href"]
+                    match = re.search(r"/results/(\d+)/(\d+)/", body_url or "")
+                    event_id = match.group(2) if match else None
 
         date_span = header.find("span")
         meet_date = date_span.get_text(strip=True) if date_span else None
@@ -130,7 +140,8 @@ def extract_athlete_results(soup):
                 "meet_id": meet_id,
                 "meet_name": meet_name,
                 "date": meet_date,
-                "event": event_name,
+                "event_id": event_id,
+                "event_name": event_name,
                 "mark": mark,
                 "mark_int": mark_int,
                 "place": place,

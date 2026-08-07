@@ -74,6 +74,42 @@ def extract_name_and_teams(soup):
     return athlete_name, class_year, current_team_slug, current_team_name, gender, previous_team_slugs
 
 
+# Matches a numeric wind reading at the very end of a mark:
+# 20.05(-0.1)
+# 10.12(+2.3)
+# 12.40(2.0)
+# 10.88(+2)
+WIND_RE = re.compile(
+    r"\(\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*\)\s*$"
+)
+
+def parse_mark_and_wind(raw_mark: str):
+    """
+    Split a TFRRS mark into the performance mark and an optional wind reading.
+
+    Examples:
+        "20.05(-0.1)" -> ("20.05", -0.1)
+        "10.12(+2.3)" -> ("10.12", 2.3)
+        "13:38.93"    -> ("13:38.93", None)
+        "DQ"           -> ("DQ", None)
+
+    The returned wind is None when no numeric wind reading is present.
+    """
+    if not raw_mark:
+        return raw_mark, None
+
+    mark_text = raw_mark.strip()
+    match = WIND_RE.search(mark_text)
+
+    if not match:
+        return mark_text, None
+
+    wind = float(match.group(1))
+    clean_mark = mark_text[:match.start()].strip()
+
+    return clean_mark, wind
+
+
 def extract_athlete_results(soup):
     """Extract all non-relay meet results for an athlete."""
     results = []
@@ -124,7 +160,9 @@ def extract_athlete_results(soup):
                 continue
 
             mark = cols[1].get_text(strip=True)
-            mark_int = time_to_seconds(mark)
+
+            clean_mark, wind = parse_mark_and_wind(mark)
+            mark_int = time_to_seconds(clean_mark)
 
             place = cols[2].get_text(strip=True)
 
@@ -144,6 +182,7 @@ def extract_athlete_results(soup):
                 "event_name": event_name,
                 "mark": mark,
                 "mark_int": mark_int,
+                "wind": wind,
                 "place": place,
                 "round": round_info,
             })

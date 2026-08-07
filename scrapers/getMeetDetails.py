@@ -10,12 +10,14 @@ logger = get_logger(__name__, "meet_scrape.log")
 def parse_event_id(event_id_str: str):
     """Parse TFRRS event_id class strings like 'round_4_3200350_89' or 'heat_3_1_3200350_71'."""
     if not event_id_str:
-        return None, None, None, False
+        return None, None, None, None, False
+    
+    print(event_id_str)
 
-    m_heat = re.match(r"heat_(\d+)_(\d+)_([0-9]+)_[0-9]+", event_id_str)
-    m_round = re.match(r"round_(\d+)_([0-9]+)_[0-9]+", event_id_str)
+    m_heat = re.match(r"^(?:compiled_)?heat_(\d+)_(\d+)_([0-9]+)_[0-9]+$", event_id_str)
+    m_round = re.match(r"^(?:compiled_)?round_(\d+)_([0-9]+)_[0-9]+$", event_id_str)
 
-    round_label, heat_number, event_uid, valid_round = None, None, None, True
+    round_num, round_label, heat_number, event_uid, valid_round = None, None, None, None, True
 
     if m_heat:
         round_num, heat_number, event_uid = int(m_heat.group(1)), int(m_heat.group(2)), m_heat.group(3)
@@ -24,7 +26,7 @@ def parse_event_id(event_id_str: str):
         round_num, event_uid = int(m_round.group(1)), m_round.group(2)
         valid_round = round_num >= 4
         if valid_round:
-            round_label, heat_number = "finals", 1
+            round_label, heat_number = "finals", 0
 
     return round_num, round_label, heat_number, event_uid, valid_round
 
@@ -155,7 +157,7 @@ def parse_xc_event(anchor):
 
     # Truncate after 'CC'
     if event_name and "CC" in event_name:
-        event_name = event_name.split("CC")[0].strip() + " CC"
+        event_name = event_name.split("Team")[0].strip()
 
     team_div = anchor.find_next("div", class_="row")
     indiv_div = team_div.find_next("div", class_="row") if team_div else None
@@ -189,6 +191,7 @@ def parse_xc_event(anchor):
             "team_name": team_name,
             "team_slug": team_slug,
             "mark": cells[5].get_text(strip=True),
+            "mark_seconds": time_to_seconds(cells[5].get_text(strip=True))
         })
 
     logger.info(f"Parsed XC event: {event_name} ({len(results)} results)")

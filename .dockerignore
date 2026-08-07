@@ -1,0 +1,30 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# Virtual environment
+venv/
+env/
+
+# Logs & runtime data
+logs/
+*.log
+data/
+tmp/
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Git
+.git
+.gitignore
+
+# Local configs
+.env
+.env.local
